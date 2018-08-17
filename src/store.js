@@ -8,8 +8,8 @@ Vue.use(Vuex)
 const store = new Vuex.Store({
   state: {
     // testApi: 'http://118.25.10.151:8800', // 测试服务器域名
-    testApi: 'http://10.10.11.41:8800', // 测试域名
-    // testApi: 'http://10.10.10.23:8800', // 李强本地
+    // testApi: 'http://10.10.11.41:8800', // 测试域名
+    testApi: 'http://10.10.10.23:8800', // 李强本地
     // testApi: 'http://10.10.10.65:8800', // 陈冠彧本地
     // testApi: 'http://10.10.10.84:8800', // 冯慧慧本地
     // testApi: 'http://10.10.10.105:8800', // 陈铁成本地

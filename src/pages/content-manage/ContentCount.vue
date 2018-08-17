@@ -91,7 +91,7 @@
               <el-dropdown-menu slot="dropdown">
                 <el-dropdown-item @click.native="see(scope.$index, scope.row)">查看</el-dropdown-item>
                 <el-dropdown-item @click.native="edit(scope.$index, scope.row)">编辑</el-dropdown-item>
-                <el-dropdown-item @click.native="del(scope.$index, scope.row)">删除</el-dropdown-item>
+                <el-dropdown-item @click.native="remove(scope.$index, scope.row)">删除</el-dropdown-item>
               </el-dropdown-menu>
             </el-dropdown>
           </template>
@@ -110,13 +110,13 @@
       <!-- 编辑内容 -->
       <el-dialog :title="title" :visible.sync="formDataShow" width="60%">
         <!-- 添加内容表单 -->
-        <form-for-content :control="control" :formData="formData" @cancelDialog="cancelDialog" @openPreview="openPreview"></form-for-content>
+        <form-for-content :control="control" :operation="operation"  :formData="formData" @cancelDialog="cancelDialog" @openPreview="openPreview"></form-for-content>
         <el-dialog
           width="30%"
-          title="内层 Dialog"
+          :title="this.dialogTitle"
           :visible.sync="innerVisible"
           append-to-body>
-          <div v-html="rawHtml"></div>
+          <div v-html="this.rawHtml"></div>
         </el-dialog>
       </el-dialog>
     </div>
@@ -167,6 +167,7 @@ export default {
       // html代码
       title:'',
       rawHtml: '',
+      dialogTitle:'',
       innerVisible: false,
       // 添加内容表单
       formData: {},
@@ -247,6 +248,7 @@ export default {
       sDate: '',
       eDate: '',
       select: '0',
+      operation: true,
       dialogVisible: false,
       recommendPopoverVisible: false, // 推荐（取消推荐）确认浮层显隐
       dialogFrameUrl: '', // 内容iframe的url
@@ -265,6 +267,7 @@ export default {
   },
   watch: {
     'formDataShow': function (val, old) {
+      console.log(val)
       if (old) {
         this.control = true
       } else {
@@ -275,15 +278,17 @@ export default {
   methods: {
     // 打开内层dialog
     openPreview (val) {
+      console.log(val);
       this.innerVisible = true;
-      this.rawHtml = val
+      this.rawHtml = val.body;
+      this.dialogTitle = val.title;
     },
 
     // 关闭表单
     cancelDialog (val) {
-      this.formDataShow = val
+      this.formDataShow = val;
+      this.getData (this.bean)
     },
-
     // 获取统计数据
     getData (bean) {
       this.$http.post(this.$store.state.testApi + '/admin/bops/content_manage/list',
@@ -322,11 +327,12 @@ export default {
         type: this.typeValue,
         channel: this.channelValue,
         source: this.sourceValue,
+        keyWord: this.searchKey,
         sDate: this.sDate,
         eDate: this.eDate,
         pageSize: 10,
         pageNo: 1
-      }
+      };
       if (pageNo) {
         params.pageNo = pageNo
       }
@@ -378,14 +384,15 @@ export default {
     // 查看内容
     see (index, row) {
       this.dialogVisible = !this.dialogVisible;
-      this.dialogFrameUrl = row.previewUrl
+      this.dialogFrameUrl = row.previewUrl;
     },
 
     // 添加内容
     addContent () {
       this.formData = {};
       this.title = '添加-内容';
-      this.formDataShow = true
+      this.formDataShow = true;
+      this.operation = true;
     },
 
     // 编辑内容
@@ -393,20 +400,24 @@ export default {
       this.title = '编辑-内容';
       console.log(row);
       this.formData = {
+        itemId:row.itemId,
         title: row.title,
-        type: row.channel,
-        content: row.content,
-        author: row.authorName,
+        channelId : row.channelId,
+        channel : row.channel,
+        authorName: row.authorName,
+        contentType:row.contentType,
+        createType:row.createType,
         body: row.body,
-        reward: true
+        isRecommend: row.isRecommend
       };
-      this.formDataShow = true
+      this.formDataShow = true;
+      this.operation = false;
     },
 
     // 删除单条数据
     remove (index, row) {
-      this.$http.post(this.$store.state.testApi + '/admin/bops/adInfo/delete',
-        this.filterData({id: row.id})
+      this.$http.post(this.$store.state.testApi + '/admin/bops/content_manage/delet_content',
+        this.filterData({itemIds: row.itemId})
       ).then(res => {
         if (res.data.code === '0') {
           // this.$message({
@@ -417,34 +428,27 @@ export default {
         }
       })
     },
-    del (index, row) {
-      var tr=document.querySelectorAll('.el-table__row')[index];
-      alert(index);
-      console.log(row);
-      tr.remove(tr);
-      this.getData(this.bean);
-    },
 
     // 推荐&&取消推荐
     recommend (index, row) {
-      let param = {
-        itemId: row.itemId,
-        recommendSourceEnum: 'BASE'
-      };
-      let params = {
-        recommendReqVOS: JSON.stringify(param)
-      };
+      // let param = {
+      //   itemIds: row.itemId,
+      //   recommendSourceEnum: 'BASE'
+      // };
+      // let params = {
+      //   recommendReqVOS: JSON.stringify(param)
+      // };
       let url = row.isRecommend === '0' ? '/admin/bops/content_manage/recommend_content' : '/admin/bops/content_manage/not_recommend_content'
       let message = row.isRecommend === '0' ? '推荐成功！' : '取消成功！'
       this.$http.post(this.$store.state.testApi + url,
-        this.filterData(params)
+        this.filterData({itemIds: row.itemId})
       ).then(res => {
         if (res.data.code === '0') {
           this.$message({
             type: 'success',
             message: message
           });
-          this.bean.pageNo = this.pageNo
+          this.bean.pageNo = this.pageNo;
           this.getData(this.bean)
         } else {
           this.$message.error(res.msg)
@@ -605,4 +609,9 @@ export default {
   height: calc(100% + 16px);
   border: 0;
 }
+  .el-dialog{
+    height: 600px;
+    overflow: hidden;
+    overflow-y: scroll;
+  }
 </style>

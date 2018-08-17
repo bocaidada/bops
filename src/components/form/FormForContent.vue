@@ -20,11 +20,11 @@
         </el-col>
       </el-row>
     </el-form-item>
-    <!-- 所属频道 -->
-    <el-form-item label="所属频道" prop="type">
-      <el-select v-model="formData.type" placeholder="请选择所属频道" size="small">
+    <!-- 文章类型 -->
+    <el-form-item label="文章类型" prop="contentType">
+      <el-select v-model="formData.contentType" placeholder="请选择文章类型" size="small">
         <el-option
-          v-for="item in pushTypes"
+          v-for="item in contentType"
           :key="item.value"
           :label="item.label"
           :value="item.value"
@@ -32,9 +32,21 @@
         </el-option>
       </el-select>
     </el-form-item>
+    <!-- 所属频道 -->
+    <el-form-item label="所属频道" prop="type">
+      <el-select v-model="formData.channelId" placeholder="请选择所属频道" size="small">
+        <el-option
+          v-for="item in pushTypes"
+          :key="item.channelId"
+          :label="item.channelName"
+          :value="item.channelId"
+        >
+        </el-option>
+      </el-select>
+    </el-form-item>
     <!-- 所属内容 -->
-    <el-form-item label="所属内容" prop="content">
-      <el-select v-model="formData.content" placeholder="请选择所属内容" size="small">
+    <el-form-item label="所属内容" prop="createType">
+      <el-select v-model="formData.createType" placeholder="请选择所属内容" size="small">
         <el-option
           v-for="item in contentTypes"
           :key="item.value"
@@ -46,22 +58,21 @@
     </el-form-item>
     <!-- 文章作者 -->
     <el-form-item label="文章作者" prop="author">
-      <el-input v-model="formData.author" size="small"></el-input>
+      <el-input v-model="formData.authorName" size="small" placeholder="请输入作者信息"></el-input>
     </el-form-item>
     <!-- 文章内容-->
-    <el-form-item label="文章内容">
+    <el-form-item label="文章内容" v-show='this.types'>
       <div id="editor" v-model="formData.body">
-        <!--<div id="toolbar" class="toolbar"></div>-->
-        <!--<div id="text" class="text" v-model="formData.body">-->
-          <!--{{formData.body}}-->
-        <!--</div>-->
       </div>
       <p class="tip">注:只能上传jpg/png格式文件，文件不能超过500K，尺寸999*999最少上传三张图片</p>
+    </el-form-item>
+    <el-form-item label="文章内容" v-show='!this.types'>
+      <el-input v-model="formData.body" size="small" placeholder="请输入视频链接"></el-input>
     </el-form-item>
 
     <el-form-item label="是否推荐文章">
       <template>
-        <el-radio v-model="formData.reward" :label="true">是</el-radio>
+        <el-radio v-model="formData.isRecommend" label="1">是</el-radio>
       </template>
     </el-form-item>
 
@@ -75,64 +86,89 @@
 <script>
 export default {
   name: 'FormForContent',
-  props: ['formData', 'control'],
+  props: ['formData', 'control','operation'],
   data () {
     return {
       // 所属频道
-      pushTypes: [
+      pushTypes: [],
+      // 文章类型
+      contentType: [
         {
-          value: '0',
-          label: '营销'
+          value: 'ARTICLE',
+          label: '文章'
         },
         {
-          value: '1',
-          label: '文章'
+          value: 'VIDEO',
+          label: '视频'
         }
       ],
       // 内容类型
       contentTypes: [
         {
-          value: '0',
-          label: '全部内容'
-        },
-        {
-          value: '1',
+          value: 'QUALITY',
           label: '精品内容'
         },
         {
-          value: '2',
+          value: 'JANESI',
           label: '平台内容'
         },
         {
-          value: '3',
+          value: 'GENERAL',
           label: '普通内容'
         }
       ],
       editor: {},
+      contentApi:'',
+      types:true,
       rules: {
+        contentType:[
+          { required: true, message: '请选择文章类型', trigger: 'change' }
+        ],
         title: [
           { required: true, message: '请填写文章标题', trigger: 'blur' }
         ],
-        type: [
+        channelId: [
           { required: true, message: '请选择所属频道', trigger: 'change' }
         ],
-        content: [
+        createType: [
           { required: true, message: '请选择所属内容', trigger: 'change' }
         ],
-        author: [
+        authorName: [
           { required: true, message: '请填写文章作者', trigger: 'blur' }
         ]
       }
     }
   },
   mounted () {
+    var _this=this;
     var E = require('wangeditor');// 使用 npm 安装
     // 创建编辑器
     this.editor = new E('#editor');
-    // this.editor = new E('#toolbar','#text');
-    this.editor.customConfig.uploadImgServer = 'http://mgr.janesi.com/admin/bops/file/upload';
-    // this.editor.customConfig.uploadImgServer = 'http://yun1.janesi.net/html/video/img';
+    // this.editor.customConfig.uploadImgServer = 'http://mgr.janesi.com/admin/bops/file/upload';
+    this.editor.customConfig.uploadImgServer = this.$store.state.testApi +'/admin/bops/file/aliyun/upload_content';
     // 提示
+    // this.editor.customConfig.customUploadImg = function (files, insert) {
+    //   console.log(files);
+    //   // files 是 input 中选中的文件列表
+    //   // insert 是获取图片 url 后，插入到编辑器的方法
+    //
+    //   // 上传代码返回结果之后，将图片插入到编辑器中
+    //   _this.$http.post(_this.$store.state.testApi + '/admin/bops/file/aliyun/upload_content',
+    //     _this.filterData({files: files})
+    //   ).then(res => {
+    //     console.log(res)
+    //     // if (res.data.code === '0') {
+    //     // }
+    //   })
+    //   // insert(imgUrl)
+    // };
+    this.editor.customConfig.uploadImgParams = {
+      // 如果版本 <=v3.1.0 ，属性值会自动进行 encode ，此处无需 encode
+      // 如果版本 >=v3.1.1 ，属性值不会自动 encode ，如有需要自己手动 encode
+      token:"0.0.0."
+
+    }
+
     this.editor.customConfig.uploadImgHooks = {
       before: function (xhr, editor, files) {
         // 图片上传之前触发
@@ -142,6 +178,10 @@ export default {
         //     prevent: true,
         //     msg: '放弃上传'
         // }
+        console.log(xhr)
+        console.log(editor)
+        console.log(files)
+
       },
       success: function (xhr, editor, result) {
         // 图片上传并返回结果，图片插入成功之后触发
@@ -182,6 +222,10 @@ export default {
     };
     this.editor.customConfig.uploadImgShowBase64 = true;
     this.editor.create();
+    if(this.formData.contentType == 'VIDEO'){
+      this.types=false;
+    }
+    this.channel_list(this.formData.contentType)
   },
   watch: {
     'formData.body': function (val, old) {
@@ -191,18 +235,41 @@ export default {
       if (val) {
         this.formData.body = ''
       }
+    },
+    'formData.contentType':function (val, old) {
+      this.channel_list(this.formData.contentType);
+      if(val!='VIDEO'){
+        this.types=true;
+      }else{
+        this.types=false;
+      }
     }
+
   },
   methods: {
     // 预览
     preview () {
-      this.$emit('openPreview', this.editor.txt.html())
+      // this.$emit('openPreview', this.editor.txt.html())
+      this.formData.body = this.editor.txt.html();
+      this.$emit('openPreview', this.formData)
     },
-
+    // 获取频道列表
+    channel_list (param) {
+      if(!param){
+        param = 'ARTICLE';
+      }
+      this.$http.post(this.$store.state.testApi + '/admin/bops/content_manage/channel_list',
+        this.filterData({channelClassify: param})
+      ).then(res => {
+        if (res.data.code === '0') {
+          this.pushTypes=res.data.result
+        }
+      })
+    },
     // 关闭弹窗
     cancel (ruleForm) {
       this.$emit('cancelDialog', false);
-      this.$refs[ruleForm].resetFields()
+      this.$refs[ruleForm].resetFields();
     },
 
     // 提交回传表单信息给父组件
@@ -211,12 +278,31 @@ export default {
       var n = (s.split('img')).length - 1;
       this.$refs[ruleForm].validate((valid) => {
         if (valid) {
-          // if (n < 3) {
-          //   this.$message('最少上传三张图')
-          // }
           this.formData.body = s;
-          console.log(this.formData)
-          // success
+          console.log(this.pushTypes)
+          console.log(this.formData.channelId)
+          this.formData.channel = this.pushTypes[parseInt(this.formData.channelId)-1].channelName;
+          if(this.formData.isRecommend){
+            this.formData.isRecommend='1'
+          }else{
+            this.formData.isRecommend='0'
+          }
+          console.log(this.formData);
+          if(this.operation){
+            // 添加一条内容
+            this.contentApi='/admin/bops/content_manage/add_content'
+          }else{
+            // 修改一条内容
+            this.contentApi='/admin/bops/content_manage/update_content'
+          }
+          this.$http.post(this.$store.state.testApi + this.contentApi,
+            this.filterData(this.formData)
+          ).then(res => {
+            console.log(res);
+            if (res.data.code === '0') {
+              this.$emit('cancelDialog', false);
+            }
+          })
         } else {
           return false
         }
